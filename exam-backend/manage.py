@@ -3,7 +3,7 @@
 import os
 import sys
 
-
+#钟鸣楚11.15号到此一游，留下足迹
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'exam_backend.settings')
