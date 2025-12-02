@@ -1,0 +1,270 @@
+// 主题颜色变量
+$primary-color: #409eff;
+$success-color: #67c23a;
+$warning-color: #e6a23c;
+$danger-color: #f56c6c;
+$info-color: #909399;
+
+// 背景颜色
+$bg-primary: #ffffff;
+$bg-secondary: #f5f7fa;
+$bg-tertiary: #ecf5ff;
+$bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$bg-gradient-light: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+// 文字颜色
+$text-primary: #303133;
+$text-secondary: #606266;
+$text-tertiary: #909399;
+$text-placeholder: #c0c4cc;
+
+// 边框颜色
+$border-primary: #dcdfe6;
+$border-light: #e4e7ed;
+$border-lighter: #ebeef5;
+$border-dark: #c0c4cc;
+
+// 阴影效果
+$shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+$shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.2);
+
+// 圆角
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 20px;
+
+// 过渡动画
+$transition-fast: 0.2s ease;
+$transition-normal: 0.3s ease;
+$transition-slow: 0.5s ease;
+
+// 全局样式
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  background-color: $bg-secondary;
+  color: $text-primary;
+  line-height: 1.6;
+}
+
+// 容器样式
+.app-container {
+  padding: 20px;
+  min-height: calc(100vh - 160px);
+}
+
+// 卡片样式
+.el-card {
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  transition: all $transition-normal;
+  
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+  
+  .el-card__header {
+    border-bottom: 1px solid $border-lighter;
+    background-color: $bg-tertiary;
+    border-radius: $radius-lg $radius-lg 0 0;
+    padding: 20px;
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
+      span {
+        font-size: 18px;
+        font-weight: 600;
+        color: $text-primary;
+      }
+    }
+  }
+  
+  .el-card__body {
+    padding: 20px;
+  }
+}
+
+// 按钮样式
+.el-button {
+  border-radius: $radius-md;
+  font-weight: 500;
+  transition: all $transition-fast;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-md;
+  }
+  
+  &--primary {
+    background-color: $primary-color;
+    border-color: $primary-color;
+    
+    &:hover {
+      background-color: darken($primary-color, 10%);
+      border-color: darken($primary-color, 10%);
+    }
+  }
+}
+
+// 菜单样式
+.el-menu {
+  border-radius: $radius-md;
+  
+  &--horizontal {
+    border-bottom: none;
+    
+    .el-menu-item {
+      margin: 0 10px;
+      border-radius: $radius-md;
+      
+      &:hover {
+        background-color: $bg-tertiary;
+      }
+      
+      &.is-active {
+        background-color: $bg-tertiary;
+      }
+    }
+  }
+}
+
+// 输入框样式
+.el-input {
+  .el-input__wrapper {
+    border-radius: $radius-md;
+    box-shadow: none;
+    transition: all $transition-fast;
+    
+    &:focus-within {
+      box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+    }
+  }
+}
+
+// 表格样式
+.el-table {
+  .el-table__header-wrapper {
+    th {
+      background-color: $bg-secondary;
+      font-weight: 600;
+      color: $text-primary;
+    }
+  }
+  
+  .el-table__body-wrapper {
+    tr {
+      transition: all $transition-fast;
+      
+      &:hover {
+        background-color: $bg-tertiary;
+      }
+    }
+  }
+}
+
+// 标签页样式
+.el-tabs {
+  .el-tabs__header {
+    margin-bottom: 20px;
+    
+    .el-tabs__nav-wrap {
+      .el-tabs__nav {
+        .el-tabs__item {
+          border-radius: $radius-md $radius-md 0 0;
+          padding: 12px 20px;
+          
+          &.is-active {
+            color: $primary-color;
+            font-weight: 600;
+          }
+        }
+        
+        .el-tabs__active-bar {
+          background-color: $primary-color;
+        }
+      }
+    }
+  }
+}
+
+// 分页样式
+.el-pagination {
+  .el-pager {
+    li {
+      border-radius: $radius-sm;
+      transition: all $transition-fast;
+      
+      &:hover {
+        color: $primary-color;
+        transform: translateY(-1px);
+      }
+      
+      &.is-active {
+        background-color: $primary-color;
+        border-color: $primary-color;
+      }
+    }
+  }
+}
+
+// 动画效果
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// 工具类
+.fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+.slide-in {
+  animation: slideIn 0.4s ease-out;
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .el-container {
+    flex-direction: column;
+  }
+  
+  .el-menu--horizontal {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
