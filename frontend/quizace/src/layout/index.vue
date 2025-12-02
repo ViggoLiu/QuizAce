@@ -104,14 +104,8 @@
 				this.$router.push('/login');
 			},
 			toCenter() {
-				// 根据角色跳转到对应的个人中心
-				if (this.getUserRole === 'student') {
-					this.$router.push('/student/center');
-				} else if (this.getUserRole === 'teacher') {
-					this.$router.push('/teacher/center');
-				} else if (this.getUserRole === 'admin') {
-					this.$router.push('/admin/center');
-				}
+				// 跳转到统一的个人中心
+				this.$router.push('/profile');
 			},
 			toUpdatePwd() {
 				// 根据角色跳转到对应的修改密码页面

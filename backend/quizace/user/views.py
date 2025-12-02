@@ -2,8 +2,16 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views import View
 from rest_framework_simplejwt.tokens import RefreshToken
-
-from user.models import SysUser, SysUserSerializer
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.conf import settings
+import os
+from django.utils.text import slugify
+from user.models import SysUser, StudentProfile, TeacherProfile
+from user.serializers import UserSerializer
 
 
 class LoginView(View):
@@ -61,7 +69,7 @@ class LoginView(View):
         except Exception as e:
             print(f'登录异常：{e}')
             return JsonResponse({'code': 500, 'info': '用户名或者密码错误'})
-        return JsonResponse({'code': 200, 'token': token, 'user': SysUserSerializer(user).data, 'info': '登录成功'})
+        return JsonResponse({'code': 200, 'token': token, 'user': UserSerializer(user).data, 'info': '登录成功'})
 
     # Create your views here.
 
@@ -113,7 +121,6 @@ class RegisterView(View):
             )
             
             # 为学生用户创建对应的学生信息记录
-            from user.models import StudentProfile
             StudentProfile.objects.create(user=user)
             
             # 生成JWT token
@@ -121,7 +128,79 @@ class RegisterView(View):
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
             
-            return JsonResponse({'code': 200, 'info': '注册成功', 'user': SysUserSerializer(user).data, 'access_token': access_token, 'refresh_token': refresh_token})
+            return JsonResponse({'code': 200, 'info': '注册成功', 'user': UserSerializer(user).data, 'access_token': access_token, 'refresh_token': refresh_token})
         except Exception as e:
             print(e)
             return JsonResponse({'code': 500, 'info': '注册失败'})
+
+
+class UserInfoView(APIView):
+    """获取当前用户信息"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        serializer = UserSerializer(user)
+        return Response({'code': 200, 'data': serializer.data, 'info': '获取用户信息成功'})
+
+
+class AvatarUploadView(APIView):
+    """上传头像"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        if 'avatar' not in request.FILES:
+            return Response({'code': 400, 'info': '没有上传文件'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = request.user
+        avatar = request.FILES['avatar']
+        
+        # 确保头像目录存在
+        avatar_dir = os.path.join(settings.MEDIA_ROOT, 'avatars')
+        if not os.path.exists(avatar_dir):
+            os.makedirs(avatar_dir)
+        
+        # 获取原始文件名和扩展名
+        original_filename = avatar.name
+        # 分离文件名和扩展名，ext包含点号（如：.jpg）
+        filename_without_ext, ext = os.path.splitext(original_filename)
+        
+        # 仅对文件名部分使用slugify，保留扩展名
+        slugified_filename = slugify(filename_without_ext)
+        
+        # 生成唯一文件名，保留原始扩展名
+        filename = f"{user.id}_{slugified_filename}{ext}"
+        filepath = os.path.join(avatar_dir, filename)
+        
+        # 保存文件
+        with open(filepath, 'wb+') as destination:
+            for chunk in avatar.chunks():
+                destination.write(chunk)
+        
+        # 更新用户头像URL
+        user.avatar = f"/media/avatars/{filename}"
+        user.save()
+        
+        # 修复：返回格式，确保前端能正确获取avatar URL
+        return Response({'code': 200, 'data': {'avatar': user.avatar}, 'info': '头像上传成功'})
+
+class UserUpdateView(APIView):
+    """更新用户信息"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, user_id):
+        # 验证用户是否有权限更新自身信息
+        if str(request.user.id) != user_id:
+            return Response({'code': 403, 'info': '没有权限更新该用户信息'}, status=status.HTTP_403_FORBIDDEN)
+        
+        user = request.user
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'code': 200, 'data': serializer.data, 'info': '更新用户信息成功'})
+        
+        return Response({'code': 400, 'info': '更新失败', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

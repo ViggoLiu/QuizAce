@@ -27,6 +27,13 @@ const routes = [
         component: () => import('../views/Welcome.vue'),
         meta: { requiresAuth: true }
       },
+      // 个人中心路由
+      {
+        path: '/profile',
+        name: 'profile',
+        component: () => import('../views/PersonalCenter.vue'),
+        meta: { requiresAuth: true }
+      },
       // 学生路由
       {
         path: '/student/questions',
