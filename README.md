@@ -147,27 +147,17 @@ QuizAce/
    - 提交信息: 简洁明了，使用中文
    - 提交频率: 每个功能模块完成后提交一次
 
-## 团队成员
-
-- **项目经理**: XXX
-- **后端开发**: XXX, XXX
-- **前端开发**: XXX, XXX
-- **测试**: XXX
-- **文档**: XXX
 
 ## 许可证
 
 MIT License
 
-## 致谢
-
-感谢武汉理工大学计算机科学与技术学院提供的指导和支持。
 
 ## 联系方式
 
 如有问题或建议，请通过以下方式联系我们：
-- Email: xxx@example.com
-- GitHub: https://github.com/yourusername/QuizAce
+- Email: 499783408@qq.com
+- GitHub: https://github.com/ViggoLiu/QuizAce
 
 ---
 
