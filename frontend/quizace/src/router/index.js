@@ -42,6 +42,12 @@ const routes = [
         meta: { requiresAuth: true, role: 'student' }
       },
       {
+        path: '/student/practice',
+        name: 'student-practice',
+        component: () => import('../views/student/StudentPracticeSessionView.vue'),
+        meta: { requiresAuth: true, role: 'student' }
+      },
+      {
         path: '/student/exam',
         name: 'student-exam',
         component: () => import('../views/student/StudentExamView.vue'),

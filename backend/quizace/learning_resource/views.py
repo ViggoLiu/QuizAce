@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Count
 from .models import LearningResource, ResourceClickRecord, ResourceFavorite
 from .serializers import LearningResourceSerializer
 
@@ -374,3 +375,38 @@ class ResourceCheckFavoriteView(APIView):
                 "info": f"检查收藏状态失败：{str(e)}",
                 "data": None
             })
+
+
+class ResourceUsageStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Return per-course usage derived from click history."""
+        usage_qs = (
+            ResourceClickRecord.objects.filter(user=request.user)
+            .values("resource__course")
+            .annotate(total_time=Count("id"))
+            .order_by("-total_time")
+        )
+
+        total_time = sum(item["total_time"] for item in usage_qs)
+        usage_data = []
+
+        for item in usage_qs:
+            course_name = item["resource__course"] or "未分配"
+            total = item["total_time"]
+            percentage = round(total / total_time * 100, 2) if total_time else 0
+            usage_data.append({
+                "course": course_name,
+                "value": total,
+                "percentage": percentage,
+            })
+
+        return Response({
+            "code": 200,
+            "info": "获取学习资源使用统计成功",
+            "data": {
+                "total": total_time,
+                "items": usage_data,
+            }
+        })

@@ -1,5 +1,15 @@
 from django.urls import path
-from .views import UploadLearningResourceView, ResourceListView, ResourceDetailView, MyResourceView, ResourceAuditView, ResourceFavoriteView, ResourceDownloadView, ResourceCheckFavoriteView
+from .views import (
+    UploadLearningResourceView,
+    ResourceListView,
+    ResourceDetailView,
+    MyResourceView,
+    ResourceAuditView,
+    ResourceFavoriteView,
+    ResourceDownloadView,
+    ResourceCheckFavoriteView,
+    ResourceUsageStatsView,
+)
 
 
 
@@ -12,4 +22,5 @@ urlpatterns = [
     path('favorite/<int:pk>/', ResourceFavoriteView.as_view()),
     path('download/<int:pk>/', ResourceDownloadView.as_view()),
     path('check_favorite/<int:pk>/', ResourceCheckFavoriteView.as_view()),
+    path('usage/stats/', ResourceUsageStatsView.as_view()),
 ]

@@ -140,6 +140,7 @@ python manage.py createsuperuser
 
 ```bash
 python manage.py runserver
+D:/ANACONDA/envs/SE_ex/python.exe manage.py runserver
 ```
 
 服务器默认运行在 `http://127.0.0.1:8000/`

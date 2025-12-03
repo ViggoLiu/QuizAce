@@ -12,8 +12,6 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from codecs import Codec
 from pathlib import Path
 
-from django.core.checks.security.base import CROSS_ORIGIN_OPENER_POLICY_VALUES
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -41,6 +39,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'user.apps.UserConfig',
     'learning_resource.apps.LearningResourceConfig',
+    'exam.apps.ExamConfig',
 ]
 
 MIDDLEWARE = [
@@ -94,7 +93,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'SE',
         'USER': 'root',
-        'PASSWORD': '123456',
+        'PASSWORD': 'zmcxgg929',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -137,7 +136,7 @@ STATIC_URL = 'static/'
 # Media files (user-uploaded content)
 # https://docs.djangoproject.com/en/4.2/topics/files/
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
