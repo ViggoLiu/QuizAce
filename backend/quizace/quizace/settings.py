@@ -91,11 +91,14 @@ WSGI_APPLICATION = 'quizace.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'SE',
-        'USER': 'root',
-        'PASSWORD': 'zmcxgg929',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': 'soft_ware',
+        'USER': 'engineering',
+        'PASSWORD': 'MrR5wUZbQcFZCnPv',
+        'HOST': 'mysql2.sqlpub.com',
+        'PORT': '3307',
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        },
     }
 }
 
