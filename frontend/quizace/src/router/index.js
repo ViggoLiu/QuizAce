@@ -34,6 +34,20 @@ const routes = [
         component: () => import('../views/PersonalCenter.vue'),
         meta: { requiresAuth: true }
       },
+      // 论坛路由
+      {
+        path: '/forum',
+        name: 'forum',
+        component: () => import('../views/ForumView.vue'),
+        meta: { requiresAuth: true }
+      },
+      // 消息路由
+      {
+        path: '/notifications',
+        name: 'notifications',
+        component: () => import('../views/NotificationView.vue'),
+        meta: { requiresAuth: true }
+      },
       // 学生路由
       {
         path: '/student/questions',

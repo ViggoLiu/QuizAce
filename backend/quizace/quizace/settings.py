@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'user.apps.UserConfig',
     'learning_resource.apps.LearningResourceConfig',
     'exam.apps.ExamConfig',
+    'forum.apps.ForumConfig',
 ]
 
 MIDDLEWARE = [

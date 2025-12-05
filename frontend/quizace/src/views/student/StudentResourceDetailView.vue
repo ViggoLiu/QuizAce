@@ -79,6 +79,107 @@
       </el-button>
     </div>
 
+    <!-- 评论和打分区域 -->
+    <el-card class="comments-card" shadow="hover" style="margin-top: 20px;">
+      <template #header>
+        <div class="card-header">
+          <span>评论和打分</span>
+        </div>
+      </template>
+      
+      <!-- 评分和评论表单 -->
+      <div class="comment-form-section">
+        <div class="rating-section">
+          <h3>总体评分</h3>
+          <el-rate
+            v-model="ratingForm.rating"
+            :max="5"
+            allow-half
+            show-score
+            score-template="{value} 分"
+            style="margin-bottom: 20px;"
+          ></el-rate>
+        </div>
+        
+        <el-form label-position="top" class="comment-form">
+          <el-form-item label="写下你的评论">
+            <el-input
+              type="textarea"
+              v-model="commentForm.content"
+              :rows="4"
+              placeholder="分享你对这个资源的看法..."
+            ></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="submitComment" :loading="submitting">提交评论</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+      
+      <!-- 评论列表 -->
+      <div class="comments-list">
+        <div class="comments-header">
+          <h3>用户评论</h3>
+          <div class="filter-controls">
+            <el-select v-model="filter.rating" placeholder="按星级筛选" style="width: 120px; margin-right: 10px;">
+              <el-option label="全部" value="null" />
+              <el-option label="5星" value="5" />
+              <el-option label="4星" value="4" />
+              <el-option label="3星" value="3" />
+              <el-option label="2星" value="2" />
+              <el-option label="1星" value="1" />
+            </el-select>
+            <el-select v-model="filter.sortBy" placeholder="排序方式" style="width: 120px;">
+              <el-option label="默认排序" value="default" />
+              <el-option label="点赞热度" value="like_count" />
+            </el-select>
+          </div>
+        </div>
+        <div v-if="comments.length === 0" class="no-comments">
+          <el-empty description="暂无评论，快来发表第一条评论吧！" />
+        </div>
+        <div v-else>
+          <el-card
+            v-for="comment in comments"
+            :key="comment.id"
+            shadow="hover"
+            class="comment-item"
+          >
+            <div class="comment-header">
+              <div class="user-info">
+                <el-avatar :src="getAvatarUrl(comment.user.avatar)" :size="40" />
+                <div class="user-details">
+                  <div class="username">{{ comment.user.username }}</div>
+                  <div class="role">{{ comment.user.role === 'student' ? '学生' : comment.user.role === 'teacher' ? '老师' : '管理员' }}</div>
+                </div>
+              </div>
+              <div class="comment-time">
+                <el-rate
+                  v-model="comment.rating"
+                  :max="5"
+                  disabled
+                  show-score
+                  score-template="{value} 分"
+                ></el-rate>
+                <div class="time">{{ formatDate(comment.create_time) }}</div>
+              </div>
+            </div>
+            <div class="comment-content">{{ comment.content }}</div>
+            <div class="comment-actions">
+              <el-button
+                type="text"
+                @click="toggleLike(comment)"
+                :icon="comment.is_liked ? 'el-icon-thumb' : 'el-icon-thumb'"
+                :class="comment.is_liked ? 'liked' : ''"
+              >
+                {{ comment.is_liked ? '已点赞' : '点赞' }} ({{ comment.like_count || 0 }})
+              </el-button>
+            </div>
+          </el-card>
+        </div>
+      </div>
+    </el-card>
+
     <!-- 相关资源推荐 -->
     <el-card class="related-resources-card" shadow="hover" style="margin-top: 20px;">
       <template #header>
@@ -140,11 +241,43 @@ const isFavorite = ref(false)
 // 相关资源
 const relatedResources = ref([])
 
+// 评论相关数据
+const comments = ref([])
+const commentForm = ref({
+  content: ''
+})
+const ratingForm = ref({
+  rating: 0
+})
+const submitting = ref(false)
+
+// 筛选相关数据
+const filter = ref({
+  rating: null, // 按星级筛选，null表示不筛选
+  sortBy: 'default' // 排序方式：default(默认)，like_count(按点赞数排序)
+})
+
+// 所有评论（用于筛选）
+const allComments = ref([])
+
 // 格式化日期
 const formatDate = (dateString) => {
   const date = new Date(dateString)
   const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }
   return date.toLocaleDateString('zh-CN', options)
+}
+
+// 处理用户头像URL
+const getAvatarUrl = (avatar) => {
+  if (!avatar) {
+    return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+  }
+  // 如果头像URL已经是完整的URL，直接返回
+  if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+    return avatar
+  }
+  // 如果是相对路径，拼接完整的URL
+  return `http://localhost:8000${avatar}`
 }
 
 // 检查用户是否已收藏资源
@@ -286,10 +419,92 @@ onMounted(() => {
   fetchResourceDetail()
 })
 
-// 监听资源变化，获取相关资源
+// 加载评论列表
+const loadComments = async () => {
+  try {
+    const response = await get(`/forum/resources/${resourceId.value}/comments/`)
+    allComments.value = response.data.results || response.data
+    // 应用筛选和排序
+    applyFilter()
+  } catch (error) {
+    console.error('加载评论失败:', error)
+  }
+}
+
+// 应用筛选和排序
+const applyFilter = () => {
+  let filteredComments = [...allComments.value]
+  
+  // 按星级筛选
+  if (filter.value.rating && filter.value.rating !== 'null') {
+    const rating = parseInt(filter.value.rating)
+    filteredComments = filteredComments.filter(comment => Math.round(comment.rating) === rating)
+  }
+  
+  // 按点赞热度排序
+  if (filter.value.sortBy === 'like_count') {
+    filteredComments.sort((a, b) => (b.like_count || 0) - (a.like_count || 0))
+  }
+  
+  comments.value = filteredComments
+}
+
+// 监听筛选条件变化，重新应用筛选
+watchEffect(() => {
+  if (allComments.value.length > 0) {
+    applyFilter()
+  }
+})
+
+// 点赞功能
+const toggleLike = async (comment) => {
+  try {
+    const response = await post(`/forum/resources/${resourceId.value}/comments/${comment.id}/like/`)
+    comment.is_liked = !comment.is_liked
+    comment.like_count = response.data.like_count
+  } catch (error) {
+    console.error('点赞失败:', error)
+    ElMessage.error('点赞失败，请稍后重试')
+  }
+}
+
+// 提交评论和打分
+const submitComment = async () => {
+  if (!commentForm.value.content.trim()) {
+    ElMessage.warning('评论内容不能为空')
+    return
+  }
+
+  if (ratingForm.value.rating === 0) {
+    ElMessage.warning('请先评分')
+    return
+  }
+
+  submitting.value = true
+  try {
+    const response = await post(`/forum/resources/${resourceId.value}/comments/`, {
+      content: commentForm.value.content,
+      rating: ratingForm.value.rating
+    })
+    comments.value.unshift(response.data)
+    commentForm.value.content = ''
+    ratingForm.value.rating = 0
+    ElMessage.success('评论提交成功')
+  } catch (error) {
+    console.error('提交评论失败:', error)
+    ElMessage.error('提交评论失败，请稍后重试')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 监听资源变化，获取相关资源和评论
 watchEffect(() => {
   if (resource.value.course) {
     fetchRelatedResources()
+  }
+  if (resourceId.value) {
+    loadComments()
   }
 })
 </script>
@@ -448,4 +663,121 @@ watchEffect(() => {
     color: #409EFF;
   }
 }
+
+/* 评论区域样式 */
+.comments-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.comment-form-section {
+  padding: 20px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.rating-section h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.comment-form {
+  margin-top: 20px;
+}
+
+.comments-list {
+  margin-top: 20px;
+}
+
+.comments-list h3 {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.no-comments {
+  text-align: center;
+  padding: 50px 0;
+}
+
+.comment-item {
+  margin-bottom: 15px;
+  border-radius: 8px;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-details {
+  margin-left: 15px;
+}
+
+.username {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.role {
+  font-size: 12px;
+  color: #1884f2;
+}
+
+.comment-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.comment-time .time {
+  font-size: 12px;
+  color: #909090;
+}
+
+.comment-content {
+  line-height: 1.6;
+  color: #303133;
+  margin-bottom: 10px;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.liked {
+  color: #f56c6c;
+}
+
+/* 评论筛选控件样式 */
+.comments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 10px;
+}
+
+/* 调整评论列表标题样式 */
+.comments-list h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
 </style>

@@ -13,6 +13,7 @@
 							<el-menu-item index="/student/analysis">学习分析</el-menu-item>
 							<el-menu-item index="/student/wrong-book">错题本</el-menu-item>
 							<el-menu-item index="/student/resource">学习资源</el-menu-item>
+							<el-menu-item index="/forum">论坛</el-menu-item>
 						</template>
 						
 						<!-- 老师菜单 -->
@@ -21,6 +22,7 @@
 							<el-menu-item index="/teacher/exam-manage">考试发布</el-menu-item>
 							<el-menu-item index="/teacher/marking">阅卷管理</el-menu-item>
 							<el-menu-item index="/teacher/analysis">教学分析</el-menu-item>
+							<el-menu-item index="/forum">论坛</el-menu-item>
 						</template>
 						
 						<!-- 管理员菜单 -->
@@ -28,6 +30,7 @@
 							<el-menu-item index="/admin/user-manage">用户管理</el-menu-item>
 							<el-menu-item index="/admin/resource-audit">资源审核</el-menu-item>
 							<el-menu-item index="/admin/system-analysis">系统分析</el-menu-item>
+							<el-menu-item index="/forum">论坛</el-menu-item>
 						</template>
 					</el-menu>
 					<el-dropdown>
@@ -44,18 +47,24 @@
 							</el-row>
 						</span>
 						<template #dropdown>
-							<el-dropdown-menu>
-								<el-dropdown-item>
-									<el-button type="text" @click="toCenter">个人中心</el-button>
-								</el-dropdown-item>
-								<el-dropdown-item>
-									<el-button type="text" @click="toUpdatePwd">修改密码</el-button>
-								</el-dropdown-item>
-								<el-dropdown-item divided>
-									<el-button type="text" @click="loginOut">退出登录</el-button>
-								</el-dropdown-item>
-							</el-dropdown-menu>
-						</template>
+				<el-dropdown-menu>
+					<el-dropdown-item @click="toCenter" class="dropdown-item">
+						<span class="dropdown-item-content">个人中心</span>
+					</el-dropdown-item>
+					<el-dropdown-item @click="toMessages" class="dropdown-item">
+						<span class="dropdown-item-content">
+							消息
+							<el-badge v-if="unreadCount > 0" :value="unreadCount" class="message-badge"></el-badge>
+						</span>
+					</el-dropdown-item>
+					<el-dropdown-item @click="toUpdatePwd" class="dropdown-item">
+						<span class="dropdown-item-content">修改密码</span>
+					</el-dropdown-item>
+					<el-dropdown-item divided @click="loginOut" class="dropdown-item">
+						<span class="dropdown-item-content">退出登录</span>
+					</el-dropdown-item>
+				</el-dropdown-menu>
+			</template>
 					</el-dropdown>
 				</el-row>
 			</el-header>
@@ -106,6 +115,10 @@
 			toCenter() {
 				// 跳转到统一的个人中心
 				this.$router.push('/profile');
+			},
+			toMessages() {
+				// 跳转到消息页面
+				this.$router.push('/notifications');
 			},
 			toUpdatePwd() {
 				// 根据角色跳转到对应的修改密码页面
@@ -183,5 +196,32 @@
 
 	.el-icon-arrow-down {
 		font-size: 16px;
+	}
+
+	.dropdown-item-content {
+		width: 100%;
+		height: 100%;
+		padding: 10px 20px;
+		cursor: pointer;
+		text-align: left;
+		transition: background-color 0.2s;
+	}
+
+	.el-dropdown-item {
+		padding: 0 !important;
+	}
+
+	.el-dropdown-item:hover {
+		background-color: rgba(64, 158, 255, 0.1) !important;
+	}
+
+	.message-badge {
+		margin-left: 5px;
+		vertical-align: top;
+		min-width: 18px;
+		height: 18px;
+		line-height: 18px;
+		padding: 0 4px;
+		font-size: 12px;
 	}
 </style>

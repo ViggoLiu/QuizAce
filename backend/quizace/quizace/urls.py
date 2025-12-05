@@ -26,6 +26,7 @@ urlpatterns = [
     path('user/',include('user.urls')),
     path('learning_resource/',include('learning_resource.urls')),
     path('exam/', include('exam.urls')),
+    path('forum/', include('forum.urls')),
 ]
 
 # 在开发环境中提供媒体文件的服务
