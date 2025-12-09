@@ -96,7 +96,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soft_ware',
         'USER': 'engineering',
-        'PASSWORD': 'MrR5wUZbQcFZCnPv',
+        'PASSWORD': '保密',
         'HOST': 'mysql2.sqlpub.com',
         'PORT': '3307',
         'OPTIONS': {
