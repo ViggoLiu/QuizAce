@@ -4,6 +4,32 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+QUESTION_SOURCE_CHOICES = (
+    ("ocr", "OCR解析"),
+    ("manual", "手动录入"),
+)
+
+QUESTION_STATUS_CHOICES = (
+    ("draft", "草稿"),
+    ("ready", "可用"),
+    ("archived", "已归档"),
+)
+
+QUESTION_TYPE_CHOICES = (
+    ("objective", "客观题"),
+    ("subjective", "主观题"),
+)
+
+ATTEMPT_TYPE_CHOICES = QUESTION_TYPE_CHOICES + (("mixed", "综合试卷"),)
+
+QUESTION_DRAFT_STATUS_CHOICES = (
+    ("uploaded", "已上传"),
+    ("processing", "解析中"),
+    ("parsed", "解析完成"),
+    ("failed", "解析失败"),
+    ("published", "已发布"),
+)
+
 
 class Subject(models.Model):
     """课程科目，用于对题目进行归类。"""
@@ -23,19 +49,29 @@ class Subject(models.Model):
 class Question(models.Model):
     """题目模型，支持客观题与主观题。"""
 
-    QUESTION_TYPES = (
-        ("objective", "客观题"),
-        ("subjective", "主观题"),
-    )
+    QUESTION_TYPES = QUESTION_TYPE_CHOICES
 
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="questions", verbose_name="所属科目")
-    question_type = models.CharField(max_length=16, choices=QUESTION_TYPES, default="objective", verbose_name="题目类型")
+    question_type = models.CharField(max_length=16, choices=QUESTION_TYPE_CHOICES, default="objective", verbose_name="题目类型")
+    source_mode = models.CharField(max_length=16, choices=QUESTION_SOURCE_CHOICES, default="manual", verbose_name="录入方式")
+    status = models.CharField(max_length=16, choices=QUESTION_STATUS_CHOICES, default="ready", verbose_name="状态")
     content = models.TextField(verbose_name="题干")
     options = models.TextField(blank=True, null=True, verbose_name="客观题选项(JSON文本)")
     answer = models.TextField(verbose_name="参考答案")
     analysis = models.TextField(blank=True, null=True, verbose_name="解析")
     score = models.PositiveIntegerField(default=5, verbose_name="分值")
+    media_url = models.CharField(max_length=255, blank=True, null=True, verbose_name="题干图片地址")
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="扩展信息")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_questions",
+        verbose_name="录入教师",
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
 
     class Meta:
         db_table = "exam_question"
@@ -55,6 +91,61 @@ class Question(models.Model):
             return None
 
 
+class QuestionDraft(models.Model):
+    """教师上传题目的草稿，支持 OCR 与手动录入。"""
+
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="question_drafts",
+        verbose_name="上传教师",
+    )
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="question_drafts",
+        verbose_name="科目",
+    )
+    question_type = models.CharField(max_length=16, choices=Question.QUESTION_TYPES, verbose_name="题目类型")
+    source_mode = models.CharField(max_length=16, choices=QUESTION_SOURCE_CHOICES, default="manual", verbose_name="来源模式")
+    status = models.CharField(max_length=16, choices=QUESTION_DRAFT_STATUS_CHOICES, default="uploaded", verbose_name="处理状态")
+    media = models.FileField(upload_to="exam/questions/", blank=True, null=True, verbose_name="题干文件")
+    media_url = models.CharField(max_length=255, blank=True, verbose_name="题干文件地址")
+    parsed_title = models.CharField(max_length=255, blank=True, verbose_name="解析标题")
+    parsed_content = models.TextField(blank=True, verbose_name="解析题干")
+    parsed_options = models.JSONField(default=list, blank=True, verbose_name="解析选项")
+    parsed_answer = models.TextField(blank=True, verbose_name="解析答案")
+    parsed_analysis = models.TextField(blank=True, verbose_name="解析说明")
+    error_message = models.TextField(blank=True, verbose_name="解析错误信息")
+    question = models.OneToOneField(
+        Question,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="draft",
+        verbose_name="发布后的题目",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+
+    class Meta:
+        db_table = "exam_question_draft"
+        verbose_name = "题目草稿"
+        verbose_name_plural = verbose_name
+        ordering = ("-updated_at", "-id")
+
+    def __str__(self) -> str:
+        return f"{self.teacher} - {self.get_status_display()}"
+
+    @property
+    def resolved_media_url(self) -> str:
+        if self.media and hasattr(self.media, "url"):
+            return self.media.url
+        return self.media_url or ""
+
+
 class ExamAssignment(models.Model):
     """教师发布的正式考试任务"""
 
@@ -66,13 +157,15 @@ class ExamAssignment(models.Model):
 
     title = models.CharField(max_length=128, verbose_name="考试标题")
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="assignments", verbose_name="科目")
-    question_type = models.CharField(max_length=16, choices=Question.QUESTION_TYPES, verbose_name="题型")
+    question_type = models.CharField(max_length=16, choices=ATTEMPT_TYPE_CHOICES, verbose_name="题型")
     question_count = models.PositiveIntegerField(default=10, verbose_name="题目数量")
     duration_seconds = models.PositiveIntegerField(default=1800, verbose_name="考试时长(秒)")
     start_time = models.DateTimeField(verbose_name="开始时间")
     end_time = models.DateTimeField(verbose_name="结束时间")
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="published", verbose_name="状态")
     description = models.TextField(blank=True, verbose_name="说明")
+    question_ids = models.JSONField(default=list, blank=True, verbose_name="固定题目列表")
+    per_question_score = models.PositiveIntegerField(default=10, verbose_name="单题分值")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -123,7 +216,7 @@ class PracticeAttempt(models.Model):
         verbose_name="学生",
     )
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, verbose_name="科目")
-    question_type = models.CharField(max_length=16, choices=Question.QUESTION_TYPES, verbose_name="题型")
+    question_type = models.CharField(max_length=16, choices=ATTEMPT_TYPE_CHOICES, verbose_name="题型")
     duration_seconds = models.PositiveIntegerField(default=1800, verbose_name="限时(秒)")
     total_questions = models.PositiveIntegerField(default=0, verbose_name="题目数量")
     correct_count = models.PositiveIntegerField(default=0, verbose_name="客观题正确数")
@@ -176,6 +269,7 @@ class PracticeAttemptItem(models.Model):
     user_answer = models.TextField(blank=True, null=True, verbose_name="学生答案")
     is_correct = models.BooleanField(null=True, blank=True, verbose_name="是否正确")
     awarded_score = models.PositiveIntegerField(default=0, verbose_name="得分")
+    expected_score = models.PositiveIntegerField(default=0, verbose_name="题目分值")
 
     class Meta:
         db_table = "exam_practice_attempt_item"

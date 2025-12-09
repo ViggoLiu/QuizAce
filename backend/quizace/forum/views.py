@@ -2,6 +2,10 @@ from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import datetime, timedelta
 from .models import ForumComment, CommentLike, CommentReply, Notification, ResourceComment, ResourceCommentLike
 from .serializers import (
     ForumCommentSerializer,
@@ -9,7 +13,8 @@ from .serializers import (
     CommentReplySerializer,
     NotificationSerializer,
     ResourceCommentSerializer,
-    ResourceCommentCreateSerializer
+    ResourceCommentCreateSerializer,
+    AdminForumSpeechSerializer
 )
 from user.models import SysUser
 
@@ -265,3 +270,187 @@ class AdminUserManagementViewSet(viewsets.ViewSet):
         )
 
         return Response({'status': 'user banned'})
+
+
+class AdminForumSpeechPagination(PageNumberPagination):
+    """论坛发言分页配置"""
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
+
+class AdminForumModerationViewSet(viewsets.ViewSet):
+    """管理员论坛发言管理视图集"""
+    permission_classes = [IsAuthenticated]
+    pagination_class = AdminForumSpeechPagination
+
+    def _parse_date(self, value, is_end=False):
+        if not value:
+            return None
+        try:
+            parsed = datetime.strptime(value, '%Y-%m-%d')
+            if is_end:
+                parsed += timedelta(days=1)
+            return timezone.make_aware(parsed, timezone.get_current_timezone())
+        except ValueError:
+            return None
+
+    def list(self, request):
+        if request.user.role != 'admin':
+            return Response({'detail': '只有管理员可以执行该操作'}, status=status.HTTP_403_FORBIDDEN)
+
+        keyword = request.query_params.get('keyword')
+        role = request.query_params.get('role')
+        speech_type = request.query_params.get('type')
+        source_type = request.query_params.get('source')
+        start_date = self._parse_date(request.query_params.get('start_date'))
+        end_date = self._parse_date(request.query_params.get('end_date'), is_end=True)
+
+        comment_qs = ForumComment.objects.filter(is_deleted=False)
+        reply_qs = CommentReply.objects.filter(is_deleted=False)
+        resource_comment_qs = ResourceComment.objects.filter(is_deleted=False)
+
+        if keyword:
+            comment_qs = comment_qs.filter(content__icontains=keyword)
+            reply_qs = reply_qs.filter(content__icontains=keyword)
+            resource_comment_qs = resource_comment_qs.filter(content__icontains=keyword)
+        if role:
+            comment_qs = comment_qs.filter(user__role=role)
+            reply_qs = reply_qs.filter(user__role=role)
+            resource_comment_qs = resource_comment_qs.filter(user__role=role)
+        if start_date:
+            comment_qs = comment_qs.filter(create_time__gte=start_date)
+            reply_qs = reply_qs.filter(create_time__gte=start_date)
+            resource_comment_qs = resource_comment_qs.filter(create_time__gte=start_date)
+        if end_date:
+            comment_qs = comment_qs.filter(create_time__lt=end_date)
+            reply_qs = reply_qs.filter(create_time__lt=end_date)
+            resource_comment_qs = resource_comment_qs.filter(create_time__lt=end_date)
+
+        records = []
+        include_comments = speech_type in (None, '', 'comment')
+        include_replies = speech_type in (None, '', 'reply')
+        include_resource_comments = speech_type in (None, '', 'resource_comment')
+
+        source_allows_forum = source_type in (None, '', 'forum')
+        source_allows_resource = source_type in (None, '', 'resource')
+
+        if include_comments and source_allows_forum:
+            for comment in comment_qs.select_related('user'):
+                records.append({
+                    'id': comment.id,
+                    'type': 'comment',
+                    'origin': 'forum',
+                    'content': comment.content,
+                    'user': comment.user,
+                    'to_user': None,
+                    'comment_id': comment.id,
+                    'parent_reply_id': None,
+                    'like_count': comment.like_count,
+                    'reply_count': comment.reply_count,
+                    'create_time': comment.create_time,
+                    'target_excerpt': None,
+                    'resource': None,
+                    'rating': None
+                })
+
+        if include_replies and source_allows_forum:
+            for reply in reply_qs.select_related('user', 'to_user', 'comment', 'parent_reply'):
+                records.append({
+                    'id': reply.id,
+                    'type': 'reply',
+                    'origin': 'forum',
+                    'content': reply.content,
+                    'user': reply.user,
+                    'to_user': reply.to_user,
+                    'comment_id': reply.comment_id,
+                    'parent_reply_id': reply.parent_reply_id,
+                    'like_count': None,
+                    'reply_count': None,
+                    'create_time': reply.create_time,
+                    'target_excerpt': reply.comment.content[:60] if reply.comment else None,
+                    'resource': None,
+                    'rating': None
+                })
+
+        if include_resource_comments and source_allows_resource:
+            for res_comment in resource_comment_qs.select_related('user', 'resource'):
+                resource_context = None
+                if res_comment.resource:
+                    resource_context = {
+                        'id': res_comment.resource_id,
+                        'name': res_comment.resource.name,
+                        'course': res_comment.resource.course,
+                    }
+                records.append({
+                    'id': res_comment.id,
+                    'type': 'resource_comment',
+                    'origin': 'resource',
+                    'content': res_comment.content,
+                    'user': res_comment.user,
+                    'to_user': None,
+                    'comment_id': None,
+                    'parent_reply_id': None,
+                    'like_count': res_comment.like_count,
+                    'reply_count': None,
+                    'create_time': res_comment.create_time,
+                    'target_excerpt': res_comment.resource.description[:60] if res_comment.resource and res_comment.resource.description else None,
+                    'resource': resource_context,
+                    'rating': res_comment.rating,
+                })
+
+        records.sort(key=lambda item: item['create_time'], reverse=True)
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(records, request)
+        serializer = AdminForumSpeechSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+    def destroy(self, request, pk=None):
+        if request.user.role != 'admin':
+            return Response({'detail': '只有管理员可以执行该操作'}, status=status.HTTP_403_FORBIDDEN)
+
+        speech_type = request.query_params.get('type', 'comment')
+        deleted_reason = request.data.get('deleted_reason') or '违规发言'
+
+        if speech_type == 'resource_comment':
+            resource_comment = get_object_or_404(ResourceComment, pk=pk, is_deleted=False)
+            resource_comment.is_deleted = True
+            resource_comment.save()
+
+            Notification.objects.create(
+                user=resource_comment.user,
+                type='comment_deleted',
+                content=f'您的资源评论被管理员删除，原因：{deleted_reason}'
+            )
+            return Response({'status': 'resource comment deleted'})
+
+        if speech_type == 'reply':
+            reply = get_object_or_404(CommentReply, pk=pk, is_deleted=False)
+            reply.is_deleted = True
+            reply.deleted_reason = deleted_reason
+            reply.save()
+
+            comment = reply.comment
+            if comment:
+                comment.reply_count = max(0, comment.reply_count - 1)
+                comment.save()
+
+            Notification.objects.create(
+                user=reply.user,
+                type='comment_deleted',
+                content=f'您的回复被管理员删除，原因：{deleted_reason}'
+            )
+            return Response({'status': 'reply deleted'})
+
+        comment = get_object_or_404(ForumComment, pk=pk, is_deleted=False)
+        comment.is_deleted = True
+        comment.deleted_reason = deleted_reason
+        comment.save()
+
+        Notification.objects.create(
+            user=comment.user,
+            type='comment_deleted',
+            content=f'您的评论被管理员删除，原因：{deleted_reason}'
+        )
+        return Response({'status': 'comment deleted'})

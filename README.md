@@ -1,6 +1,6 @@
 # QuizAce
 
-武汉理工大学 软件工程 大作业 QuizAce 平台
+武汉理工大学 软件工程基础实验 大作业 QuizAce 平台
 
 Wuhan University of Technology Software Engineering Final Assignment — QuizAce Platform
 
@@ -20,6 +20,10 @@ This repository stores the code for an **QuizAce**, an online exam and smart gra
 - 🤖 **智能批阅**：选择题自动批阅，主观题AI辅助批阅
 - 📊 **成绩统计**：多维度成绩分析，可视化报表
 - 📚 **学习资源**：支持上传和管理学习资料
+- 💬 **论坛功能**：支持课程论坛、评论管理，增强师生互动
+- 📖 **做题板块**：丰富的练习模式，记录学习轨迹
+- 👤 **个人中心**：个性化设置，学习进度跟踪
+- ☁️ **云端数据库**：数据安全存储，支持多终端访问
 
 ### 技术亮点
 - 前后端分离架构，开发效率高
@@ -32,8 +36,8 @@ This repository stores the code for an **QuizAce**, an online exam and smart gra
 ### 后端
 - **框架**：Django 4.2.7
 - **语言**：Python 3.x
-- **数据库**：MySQL
-- **依赖**：numpy, pandas, tensorflow (for AI features)
+- **数据库**：SQLPub
+- **认证**：JWT-based authentication
 
 ### 前端
 - **框架**：Vue 3
@@ -42,29 +46,7 @@ This repository stores the code for an **QuizAce**, an online exam and smart gra
 - **路由**：Vue Router
 - **HTTP客户端**：Axios
 - **样式**：SCSS
-
-## 目录结构
-
-```
-QuizAce/
-├── backend/                  # 后端代码
-│   └── quizace/             # Django项目
-│       ├── quizace/         # 项目配置
-│       ├── user/            # 用户模块
-│       ├── learning_resource/ # 学习资源模块
-│       ├── templates/       # 模板文件
-│       ├── manage.py        # Django管理脚本
-│       ├── requirements.txt # 依赖列表
-│       └── readme.md        # 后端说明文档
-├── frontend/                # 前端代码
-│   └── quizace/             # Vue项目
-│       ├── public/          # 静态资源
-│       ├── src/             # 源代码
-│       ├── package.json     # 项目配置
-│       └── README.md        # 前端说明文档
-├── se.sql                   # 数据库初始化脚本
-└── README.md                # 项目总说明文档
-```
+- **AI服务**：ZenMux
 
 ## 安装与运行
 
@@ -73,79 +55,16 @@ QuizAce/
 - Node.js 14+
 - MySQL 8.0+
 
-### 后端部署
+### 前后端详细部署及说明
 
-1. **安装依赖**
-   ```bash
-   cd backend/quizace
-   pip install -r requirements.txt
-   ```
+详见 `backend/quizace/readme.md` 和 `frontend/quizace/readme.md`
 
-2. **配置数据库**
-   - 创建MySQL数据库
-   - 修改`quizace/settings.py`中的数据库配置
-
-3. **初始化数据库**
-   ```bash
-   python manage.py migrate
-   ```
-
-4. **运行开发服务器**
-   ```bash
-   python manage.py runserver
-   ```
-
-### 前端部署
-
-1. **安装依赖**
-   ```bash
-   cd frontend/quizace
-   npm install
-   ```
-
-2. **配置API地址**
-   - 修改`src/config.js`中的API基础地址
-
-3. **运行开发服务器**
-   ```bash
-   npm run serve
-   ```
-
-4. **构建生产版本**
-   ```bash
-   npm run build
-   ```
-
-## 项目说明
-
-### 模块划分
-
-#### 后端模块
-- `user`: 用户认证与管理
-- `quiz`: 题库与考试管理
-- `learning_resource`: 学习资源管理
-
-#### 前端模块
-- `views`: 页面组件
-- `components`: 通用组件
-- `api`: API请求封装
-- `store`: Vuex状态管理
-- `router`: 路由配置
-
-### 开发规范
-
-1. **代码风格**
-   - Python: PEP 8
-   - JavaScript/HTML/CSS: 遵循ESLint和Prettier配置
-
-2. **命名规范**
-   - 文件名: 小写字母，下划线分隔
-   - 类名: 驼峰式命名
-   - 函数/变量名: 小写字母，下划线分隔
-
-3. **提交规范**
-   - 提交信息: 简洁明了，使用中文
-   - 提交频率: 每个功能模块完成后提交一次
+## 开发日志
+- 2025-11-28：项目基本框架，
+- 2025-12-02：项目框架完善、学习资料上传审核查看
+- 2025-12-03：更新做题相关模块，加入云端数据库
+- 2025-12-05：添加论坛板块，评论以及评论管理
+- 2026-12-09：完善所有模块，接入AI服务
 
 
 ## 许可证
@@ -155,9 +74,15 @@ MIT License
 
 ## 联系方式
 
-如有问题或建议，请通过以下方式联系我们：
-- Email: 499783408@qq.com
+### 开发团队
+
+- **团队成员**：
+  - 刘明杰- Email: 499783408@qq.com
+  - 钟鸣楚- Email: 1446035863@qq.com
+
 - GitHub: https://github.com/ViggoLiu/QuizAce
+
+如有问题或建议，请通过以上方式联系我们：
 
 ---
 

@@ -23,10 +23,10 @@ from django.conf.urls.static import static
 from . import views
 
 urlpatterns = [
-    path('user/',include('user.urls')),
-    path('learning_resource/',include('learning_resource.urls')),
-    path('exam/', include('exam.urls')),
-    path('forum/', include('forum.urls')),
+    path('api/user/',include('user.urls')),
+    path('api/learning_resource/',include('learning_resource.urls')),
+    path('api/exam/', include('exam.urls')),
+    path('api/forum/', include('forum.urls')),
 ]
 
 # 在开发环境中提供媒体文件的服务

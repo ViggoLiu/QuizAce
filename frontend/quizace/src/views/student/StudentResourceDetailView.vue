@@ -210,10 +210,11 @@
 import { ref, onMounted, computed, watchEffect } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { get, post, del } from '@/util/request.js'
+import { get, post, del, getMediaBaseUrl } from '@/util/request.js'
 
 const router = useRouter()
 const route = useRoute()
+const mediaBaseUrl = getMediaBaseUrl()
 
 // 资源ID
 const resourceId = computed(() => route.params.id)
@@ -277,7 +278,7 @@ const getAvatarUrl = (avatar) => {
     return avatar
   }
   // 如果是相对路径，拼接完整的URL
-  return `http://localhost:8000${avatar}`
+  return avatar.startsWith('/') ? `${mediaBaseUrl}${avatar}` : `${mediaBaseUrl}/${avatar}`
 }
 
 // 检查用户是否已收藏资源
@@ -343,10 +344,25 @@ const goToDetail = (id) => {
   router.push(`/student/resource/detail/${id}`)
 }
 
+const trackResourceView = async () => {
+  try {
+    const response = await post(`/learning_resource/view/${resource.value.id}/`)
+    if (response.data.code === 200) {
+      resource.value.click_count = response.data.data.click_count
+    }
+  } catch (error) {
+    console.error('记录资源浏览失败:', error)
+  }
+}
+
 // 查看资源
 const viewResource = () => {
+  trackResourceView()
+  if (!resource.value.file_url) {
+    ElMessage.warning('暂无资源文件可查看')
+    return
+  }
   ElMessage.info(`查看资源: ${resource.value.name}`)
-  // 实际项目中应打开资源查看页面或预览
   window.open(resource.value.file_url, '_blank')
 }
 

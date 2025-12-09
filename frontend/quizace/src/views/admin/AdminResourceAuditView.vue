@@ -140,6 +140,17 @@
               >
                 恢复审核
               </el-button>
+              <el-popconfirm
+                title="确认删除该资源？删除后不可恢复"
+                confirm-button-text="删除"
+                cancel-button-text="取消"
+                confirm-button-type="danger"
+                @confirm="deleteResource(resource)"
+              >
+                <template #reference>
+                  <el-button type="danger" size="small" plain @click.stop>删除</el-button>
+                </template>
+              </el-popconfirm>
             </div>
           </div>
         </div>
@@ -224,6 +235,18 @@
           <template v-else-if="currentResource.status === 2">
             <el-button type="primary" @click="auditResource(currentResource, 0)">恢复审核</el-button>
           </template>
+
+          <el-popconfirm
+            title="确认删除该资源？删除后不可恢复"
+            confirm-button-text="删除"
+            cancel-button-text="取消"
+            confirm-button-type="danger"
+            @confirm="deleteResource(currentResource)"
+          >
+            <template #reference>
+              <el-button type="danger" plain>删除资源</el-button>
+            </template>
+          </el-popconfirm>
         </div>
       </div>
       
@@ -268,7 +291,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { get, post } from '@/util/request.js'
+import { get, post, del } from '@/util/request.js'
 
 // 筛选表单
 const filterForm = ref({
@@ -286,7 +309,7 @@ const currentPage = ref(1)
 
 // 学院和课程选项（实际项目中可从API获取）
 const colleges = ref(['计算机学院', '电子工程学院', '机械工程学院', '经济管理学院', '文学院'])
-const courses = ref(['高等数学', '大学英语', '计算机基础', '数据结构', '操作系统', '数据库原理'])
+const courses = ref(['大学英语', '计算机基础', '数据结构', '操作系统', '数据库原理'])
 
 // 资源详情对话框
 const detailDialogVisible = ref(false)
@@ -457,6 +480,23 @@ const handleReject = async () => {
       return
     }
     ElMessage.error('拒绝审核失败，请稍后重试')
+  }
+}
+
+// 删除资源
+const deleteResource = async (resource) => {
+  try {
+    const response = await del(`/learning_resource/admin/delete/${resource.id}/`)
+    if (response.data.code === 200) {
+      ElMessage.success('资源已删除')
+      detailDialogVisible.value = false
+      fetchResources()
+    } else {
+      ElMessage.error(response.data.info || '删除失败')
+    }
+  } catch (error) {
+    console.error('删除资源失败:', error)
+    ElMessage.error('删除资源失败，请稍后重试')
   }
 }
 

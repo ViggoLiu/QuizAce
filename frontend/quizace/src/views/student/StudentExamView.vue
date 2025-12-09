@@ -56,7 +56,7 @@
         </el-table-column>
         <el-table-column prop="question_type" label="题型" width="100">
           <template #default="{ row }">
-            {{ row.question_type === 'objective' ? '客观题' : '主观题' }}
+            {{ questionTypeLabel(row.question_type) }}
           </template>
         </el-table-column>
         <el-table-column label="考试时间" min-width="200">
@@ -108,7 +108,12 @@ const ongoingList = ref([])
 const assignmentList = ref([])
 const startingId = ref(null)
 
-const questionTypeLabel = (value) => (value === 'objective' ? '客观题' : '主观题')
+const questionTypeLabel = (value) => {
+  if (value === 'objective') return '客观题'
+  if (value === 'subjective') return '主观题'
+  if (value === 'mixed') return '组合题'
+  return value || '-'
+}
 
 const formatCountdown = (value) => {
   const safe = Math.max(0, Number(value) || 0)

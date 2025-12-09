@@ -50,6 +50,9 @@
                   {{ item.question.score }} 分 · {{ item.subject_name }}
                 </p>
                 <h4>{{ item.question.content }}</h4>
+                <div v-if="item.question.media_url" class="question-media">
+                  <img :src="formatMediaUrl(item.question.media_url)" alt="题干图片" />
+                </div>
               </div>
               <div class="card-meta">
                 <el-tag type="warning" size="small">错 {{ item.wrong_times }} 次</el-tag>
@@ -102,7 +105,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { del, get } from '@/util/request'
+import { del, get, getMediaBaseUrl } from '@/util/request'
 
 const loading = ref(false)
 const entries = ref([])
@@ -130,6 +133,19 @@ const buildParams = () => {
     params.subject_id = selectedSubject.value
   }
   return params
+}
+
+const mediaBaseUrl = getMediaBaseUrl()
+
+const formatMediaUrl = (value) => {
+  if (!value) return ''
+  if (/^https?:/i.test(value)) {
+    return value
+  }
+  if (value.startsWith('/')) {
+    return `${mediaBaseUrl}${value}`
+  }
+  return `${mediaBaseUrl}/${value}`
 }
 
 const fetchWrongBook = async () => {
@@ -331,5 +347,20 @@ onMounted(() => {
   background: #f5f7fa;
   padding: 8px;
   border-radius: 4px;
+}
+
+.question-media {
+  margin-top: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e4e7ed;
+  background: #f9fafc;
+
+  img {
+    display: block;
+    width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+  }
 }
 </style>

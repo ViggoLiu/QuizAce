@@ -90,7 +90,7 @@
 
 <script>
 // 导入请求工具
-import request from '@/util/request.js'
+import request, { getMediaBaseUrl } from '@/util/request.js'
 
 export default {
   name: 'PersonalCenter',
@@ -136,17 +136,11 @@ export default {
         
         // 设置基础用户信息
         // 处理头像URL，确保是完整的URL
-        let avatarUrl = userData.avatar
-        if (avatarUrl && avatarUrl.startsWith('/')) {
-          // 如果是相对路径，拼接完整的服务器地址
-          avatarUrl = request.getServerUrl() + avatarUrl.slice(1)
-        }
-        
         this.userInfo = {
           id: userData.id,
           username: userData.username,
           role: userData.role,
-          avatar: avatarUrl,
+          avatar: this.resolveAvatarUrl(userData.avatar),
           email: userData.email,
           phone: userData.phone,
           remark: userData.remark
@@ -213,12 +207,7 @@ export default {
           if (response.data && response.data.data && response.data.data.avatar) {
             // 确保头像URL是完整的，包含服务器地址
             const avatarUrl = response.data.data.avatar
-            if (avatarUrl.startsWith('/')) {
-              // 如果是相对路径，拼接完整的服务器地址
-              this.userInfo.avatar = request.getServerUrl() + avatarUrl.slice(1)
-            } else {
-              this.userInfo.avatar = avatarUrl
-            }
+            this.userInfo.avatar = this.resolveAvatarUrl(avatarUrl)
             this.$message.success('头像上传成功')
           }
         } catch (error) {
@@ -236,6 +225,17 @@ export default {
         // 清空文件输入，以便可以重复上传同一文件
         this.$refs.fileInput.value = ''
       }
+    },
+
+    resolveAvatarUrl(path) {
+      if (!path) {
+        return ''
+      }
+      if (/^https?:/i.test(path)) {
+        return path
+      }
+      const base = getMediaBaseUrl()
+      return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`
     },
     
     // 表单提交

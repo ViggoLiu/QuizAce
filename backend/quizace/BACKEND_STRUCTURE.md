@@ -17,20 +17,19 @@
 
 | 模块 | 主要文件 | 作用 |
 | --- | --- | --- |
-| `exam/` | `models.py`、`serializers.py`、`views.py`、`filter.py`、`adminx.py`、`tests/` | 管理考试、试卷、成绩、练习与主观题批改等核心逻辑，并提供 REST 接口及 xadmin 配置。|
-| `question/` | `models.py`、`resource.py`、`serializers.py`、`views.py`、`adminx.py`、`tests/` | 题库模块，支持选择/填空/判断/主观题管理、随机抽题 API，以及 import-export 批量导入。|
-| `record/` | `models.py`、`serializers.py`、`views.py`、`xadmin.py` | 练习记录模块，记录学生在模拟练习中的作答轨迹并对外提供查询接口。|
-| `user/` | `models.py`、`serializers.py`、`views.py`、`resource.py`、`adminx.py`、`tests/` | 用户域，扩展学生、教师、班级模型，提供注册、登录、密码修改和基础资料 API，并集成 import-export。|
+| `exam/` | `models.py`、`serializers.py`、`views.py`、`admin.py`、`tests/` | 管理考试、试卷、成绩、练习与主观题批改等核心逻辑，并提供 REST 接口及后台管理配置。|
+| `forum/` | `models.py`、`serializers.py`、`views.py`、`admin.py`、`tests/` | 论坛功能模块，支持课程论坛、评论管理、点赞等功能，增强师生互动。|
+| `learning_resource/` | `models.py`、`serializers.py`、`views.py`、`admin.py`、`tests/` | 学习资源管理模块，支持资源上传、下载、收藏、点击记录等功能。|
+| `user/` | `models.py`、`serializers.py`、`views.py`、`admin.py`、`tests/` | 用户域，扩展学生、教师、班级模型，提供注册、登录、密码修改和基础资料 API。|
 | `requirements.txt` | 项目使用的 Python 依赖清单，自定义维护。|
 | `README.md`、`BACKEND_STRUCTURE.md` | 项目文档，概述运行方式与架构说明。|
 
 ## 3. 第三方扩展集成
 | 组件 | 相关文件/目录 | 说明 |
 | --- | --- | --- |
-| Django REST Framework | 各 app 的 `serializers.py`、`views.py` 中大量使用；`ExamOnline/settings.py` 中配置。|
-| xadmin | `exam/adminx.py`、`question/adminx.py`、`record/xadmin.py`、`user/adminx.py` 以及 `static/xadmin/` 资源。|
-| django-import-export | `question/resource.py`、`user/resource.py` 以及 `static/import_export/` 中的样式脚本。|
-| django-filter | `exam/filter.py` 和 `ExamListViewSet` 中的过滤配置。|
+| Django REST Framework | 各 app 的 `serializers.py`、`views.py` 中大量使用；`quizace/settings.py` 中配置。|
+| Django Admin | 各 app 的 `admin.py` 文件，用于后台管理配置。|
+| django-filter | 用于API过滤功能，在相关视图中使用。|
 
 ## 4. 结构总结
 

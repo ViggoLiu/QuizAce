@@ -197,7 +197,7 @@ const currentPage = ref(1)
 
 // 学院和课程选项（实际项目中可从API获取）
 const colleges = ref(['计算机学院', '电子工程学院', '机械工程学院', '经济管理学院', '文学院'])
-const courses = ref(['高等数学', '大学英语', '计算机基础', '数据结构', '操作系统', '数据库原理'])
+const courses = ref(['大学英语', '计算机基础', '数据结构', '操作系统', '数据库原理'])
 
 // 格式化日期
 const formatDate = (dateString) => {

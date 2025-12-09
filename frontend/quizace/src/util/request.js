@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 
-let baseUrl="http://localhost:8000/"
+let baseUrl="http://localhost:8000/api"
 //创建axios实例
 const httpService = axios.create({
     //url前缀-"http:xxx.xxx*
@@ -79,16 +79,37 @@ export function post(url, params = {}, config = {}) {
     });
 }
 
+/* put请求
+url:请求地址
+params:参数
+config:配置项 */
+
+export function put(url, params = {}, config = {}) {
+    return new Promise((resolve, reject) => {
+        httpService({
+            url: url,
+            method: 'put',
+            ...(params ? { data: params } : {}),
+            ...config
+        }).then(response => {
+            resolve(response);
+        }).catch(error => {
+            reject(error);
+        });
+    });
+}
+
 /* delete请求
 url:请求地址
 params:参数 */
 
-export function del(url, params = {}) {
+export function del(url, params = {}, config = {}) {
     return new Promise((resolve, reject) => {
         httpService({
             url: url,
             method: 'delete',
-            params: params
+            params: params,
+            ...config
         }).then(response => {
             console.log(response);
             resolve(response);
@@ -109,9 +130,7 @@ export function fileUpload(url, params = {}) {
             url: url,
             method: 'post',
             data: params, // 使用data属性传递文件数据
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
+            // 移除手动设置的Content-Type，让axios自动处理
         }).then(response => {
             resolve(response);
         }).catch(error => {
@@ -124,10 +143,16 @@ export function getServerUrl(){
     return baseUrl
 }
 
+export function getMediaBaseUrl(){
+    return getServerUrl().replace(/\/api\/?$/, '')
+}
+
 export default{
     get,
     post,
+    put,
     del,
     fileUpload,
-    getServerUrl
+    getServerUrl,
+    getMediaBaseUrl
 }

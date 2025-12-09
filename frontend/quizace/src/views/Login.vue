@@ -94,7 +94,6 @@
   <script setup>
 import request from '@/util/request'
 import { ref, onMounted } from 'vue'
-import qs from 'qs'
 import { ElMessage } from 'element-plus'
 import Cookies from "js-cookie";
 import { encrypt, decrypt } from "@/util/jsencrypt";
@@ -124,7 +123,7 @@ const route = useRoute()
             if(valid){
                 loading.value = true
                 try {
-                    let result = await request.post('user/login?'+qs.stringify(loginForm.value))
+                    let result = await request.post('/user/login/', loginForm.value)
                     console.log(result)
                     let data=result.data
                     if(data.code==200){

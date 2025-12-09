@@ -130,9 +130,9 @@ const routes = [
         meta: { requiresAuth: true, role: 'admin' }
       },
       {
-        path: '/admin/system-analysis',
-        name: 'admin-system-analysis',
-        component: () => import('../views/admin/AdminSystemAnalysisView.vue'),
+        path: '/admin/forum-manage',
+        name: 'admin-forum-manage',
+        component: () => import('../views/admin/AdminForumManageView.vue'),
         meta: { requiresAuth: true, role: 'admin' }
       }
     ]

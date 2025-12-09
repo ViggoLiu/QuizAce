@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Count
+from django.db.models import Count, F
 from .models import LearningResource, ResourceClickRecord, ResourceFavorite
 from .serializers import LearningResourceSerializer
 
@@ -89,36 +89,13 @@ class ResourceListView(APIView):
         })
 
 
-from django.utils import timezone
-from datetime import timedelta
-
 class ResourceDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
 
         try:
-            # 如果是管理员或需要查看所有状态的资源，可以添加权限判断
             resource = LearningResource.objects.get(id=pk)
-            
-            # 检查用户是否已经点击过该资源，添加时间限制（例如24小时内只能增加一次点击量）
-            click_limit_time = 24  # 小时
-            time_threshold = timezone.now() - timedelta(hours=click_limit_time)
-            
-            # 查找指定时间内的点击记录
-            existing_record = ResourceClickRecord.objects.filter(
-                user=request.user,
-                resource=resource,
-                clicked_at__gte=time_threshold
-            ).first()
-            
-            if not existing_record:
-                # 创建新的点击记录
-                ResourceClickRecord.objects.create(user=request.user, resource=resource)
-                # 增加点击量
-                resource.click_count += 1
-                resource.save()
-
             serializer = LearningResourceSerializer(resource, context={'request': request})
             return Response({
                 "code": 200,
@@ -136,6 +113,36 @@ class ResourceDetailView(APIView):
             return Response({
                 "code": 500,
                 "info": f"获取资源详情失败：{str(e)}",
+                "data": None
+            })
+
+
+class ResourceViewTrackView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            resource = LearningResource.objects.get(id=pk)
+
+            ResourceClickRecord.objects.create(user=request.user, resource=resource)
+            LearningResource.objects.filter(id=resource.id).update(click_count=F('click_count') + 1)
+            resource.refresh_from_db(fields=['click_count'])
+
+            return Response({
+                "code": 200,
+                "info": "点击记录成功",
+                "data": {"click_count": resource.click_count}
+            })
+        except LearningResource.DoesNotExist:
+            return Response({
+                "code": 404,
+                "info": "资源不存在",
+                "data": None
+            })
+        except Exception as exc:
+            return Response({
+                "code": 500,
+                "info": f"记录点击失败：{str(exc)}",
                 "data": None
             })
 
@@ -189,6 +196,46 @@ class ResourceAuditView(APIView):
             "info": "审核完成",
             "data": None
         })
+
+
+class ResourceAdminDeleteView(APIView):
+    """允许管理员删除任意学习资源。"""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        if getattr(request.user, 'role', None) != 'admin':
+            return Response({
+                "code": 403,
+                "info": "仅管理员可删除资源",
+                "data": None
+            })
+
+        try:
+            resource = LearningResource.objects.get(id=pk)
+
+            # 删除物理文件
+            if resource.file:
+                resource.file.delete(save=False)
+
+            resource.delete()
+
+            return Response({
+                "code": 200,
+                "info": "资源删除成功",
+                "data": None
+            })
+        except LearningResource.DoesNotExist:
+            return Response({
+                "code": 404,
+                "info": "资源不存在",
+                "data": None
+            })
+        except Exception as exc:
+            return Response({
+                "code": 500,
+                "info": f"资源删除失败：{str(exc)}",
+                "data": None
+            })
 
 
 class ResourceFavoriteView(APIView):

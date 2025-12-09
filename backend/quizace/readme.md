@@ -22,26 +22,42 @@ backend/quizace/
 │   ├── settings.py      # 项目配置
 │   ├── urls.py          # 主路由
 │   ├── wsgi.py          # WSGI入口
-│   └── asgi.py          # ASGI入口
+│   ├── asgi.py          # ASGI入口
+│   └── views.py         # 项目视图
 ├── user/                # 用户模块
 │   ├── models.py        # 用户模型
 │   ├── views.py         # 用户视图
 │   ├── serializers.py   # 序列化器
 │   ├── urls.py          # 用户路由
-│   └── permissions.py   # 权限控制
+│   ├── admin.py         # 后台管理
+│   ├── middleware.py    # 中间件
+│   └── tests.py         # 测试用例
 ├── learning_resource/   # 学习资源模块
 │   ├── models.py        # 资源模型
 │   ├── views.py         # 资源视图
 │   ├── serializers.py   # 序列化器
-│   └── urls.py          # 资源路由
-├── quiz/                # 题库与考试模块
-│   ├── models.py        # 题库模型
-│   ├── views.py         # 题库视图
+│   ├── urls.py          # 资源路由
+│   ├── admin.py         # 后台管理
+│   └── tests.py         # 测试用例
+├── exam/                # 题库与考试模块
+│   ├── models.py        # 考试模型
+│   ├── views.py         # 考试视图
 │   ├── serializers.py   # 序列化器
-│   └── urls.py          # 题库路由
+│   ├── urls.py          # 考试路由
+│   ├── admin.py         # 后台管理
+│   └── tests.py         # 测试用例
+├── forum/               # 论坛模块
+│   ├── models.py        # 论坛模型
+│   ├── views.py         # 论坛视图
+│   ├── serializers.py   # 序列化器
+│   ├── urls.py          # 论坛路由
+│   ├── admin.py         # 后台管理
+│   └── tests.py         # 测试用例
 ├── manage.py            # Django管理脚本
 ├── requirements.txt     # 依赖列表
 ├── templates/           # HTML模板
+├── readme.md            # 后端说明文档
+├── BACKEND_STRUCTURE.md # 后端结构说明
 └── .gitignore           # Git忽略文件
 ```
 
@@ -51,18 +67,28 @@ backend/quizace/
 - 用户注册、登录、登出
 - 用户信息管理
 - 角色权限控制（学生、教师、管理员）
+- 学生、教师、班级模型扩展
 
 ### 2. 学习资源模块 (learning_resource)
 - 学习资料上传与下载
 - 资源分类与搜索
 - 资源权限管理
+- 资源收藏、点击记录
 
-### 3. 题库与考试模块 (quiz)
+### 3. 题库与考试模块 (exam)
 - 题目管理（增删改查）
 - 试卷创建与管理
 - 在线考试功能
 - 自动/手动批阅
 - 成绩统计与分析
+- 练习模式与作答记录
+- 错题本功能
+
+### 4. 论坛模块 (forum)
+- 课程论坛功能
+- 评论管理
+- 点赞功能
+- 增强师生互动
 
 ## API文档
 

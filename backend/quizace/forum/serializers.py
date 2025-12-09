@@ -113,3 +113,21 @@ class CommentLikeSerializer(serializers.ModelSerializer):
         model = CommentLike
         fields = ['id', 'comment', 'user', 'create_time']
         read_only_fields = ['user', 'create_time']
+
+
+class AdminForumSpeechSerializer(serializers.Serializer):
+    """管理员查看的论坛发言信息"""
+    id = serializers.IntegerField()
+    type = serializers.CharField()
+    origin = serializers.CharField()
+    content = serializers.CharField()
+    user = UserSerializer()
+    to_user = UserSerializer(allow_null=True, required=False)
+    comment_id = serializers.IntegerField(allow_null=True, required=False)
+    parent_reply_id = serializers.IntegerField(allow_null=True, required=False)
+    like_count = serializers.IntegerField(allow_null=True, required=False)
+    reply_count = serializers.IntegerField(allow_null=True, required=False)
+    create_time = serializers.DateTimeField()
+    target_excerpt = serializers.CharField(allow_null=True, required=False, max_length=255)
+    resource = serializers.DictField(allow_null=True, required=False)
+    rating = serializers.IntegerField(allow_null=True, required=False)

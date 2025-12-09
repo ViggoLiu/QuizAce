@@ -11,7 +11,9 @@ from django.conf import settings
 import os
 from django.utils.text import slugify
 from user.models import SysUser, StudentProfile, TeacherProfile
-from user.serializers import UserSerializer
+from user.serializers import UserSerializer, AdminUserManageSerializer
+from learning_resource.models import LearningResource
+from forum.models import ForumComment, CommentReply, ResourceComment
 
 
 class LoginView(View):
@@ -204,3 +206,125 @@ class UserUpdateView(APIView):
             return Response({'code': 200, 'data': serializer.data, 'info': '更新用户信息成功'})
         
         return Response({'code': 400, 'info': '更新失败', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminUserListCreateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def _ensure_admin(self, request):
+        if getattr(request.user, 'role', None) != 'admin':
+            return Response({'code': 403, 'info': '仅管理员可执行此操作'}, status=status.HTTP_403_FORBIDDEN)
+
+    def get(self, request):
+        denied = self._ensure_admin(request)
+        if denied:
+            return denied
+
+        role = request.GET.get('role')
+        keyword = request.GET.get('keyword', '')
+
+        manageable_roles = ['student', 'teacher', 'admin']
+        qs = SysUser.objects.filter(role__in=manageable_roles)
+        if role in manageable_roles:
+            qs = qs.filter(role=role)
+        if keyword:
+            qs = qs.filter(username__icontains=keyword)
+
+        serializer = AdminUserManageSerializer(qs.order_by('-create_time'), many=True)
+        return Response({'code': 200, 'info': '获取用户列表成功', 'data': serializer.data})
+
+    def post(self, request):
+        denied = self._ensure_admin(request)
+        if denied:
+            return denied
+
+        serializer = AdminUserManageSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'code': 200, 'info': '创建用户成功', 'data': serializer.data})
+        return Response({'code': 400, 'info': '创建用户失败', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminUserDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def _ensure_admin(self, request):
+        if getattr(request.user, 'role', None) != 'admin':
+            return Response({'code': 403, 'info': '仅管理员可执行此操作'}, status=status.HTTP_403_FORBIDDEN)
+
+    def _get_user(self, pk):
+        manageable_roles = ['student', 'teacher', 'admin']
+        try:
+            return SysUser.objects.get(id=pk, role__in=manageable_roles)
+        except SysUser.DoesNotExist:
+            return None
+
+    def put(self, request, pk):
+        denied = self._ensure_admin(request)
+        if denied:
+            return denied
+
+        user = self._get_user(pk)
+        if not user:
+            return Response({'code': 404, 'info': '用户不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AdminUserManageSerializer(user, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'code': 200, 'info': '更新用户成功', 'data': serializer.data})
+        return Response({'code': 400, 'info': '更新用户失败', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        denied = self._ensure_admin(request)
+        if denied:
+            return denied
+
+        user = self._get_user(pk)
+        if not user:
+            return Response({'code': 404, 'info': '用户不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        user.delete()
+        return Response({'code': 200, 'info': '删除用户成功', 'data': None})
+
+
+class AdminOverviewStatsView(APIView):
+    """管理员看板数据"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if getattr(request.user, 'role', None) != 'admin':
+            return Response({'code': 403, 'info': '仅管理员可执行此操作'}, status=status.HTTP_403_FORBIDDEN)
+
+        student_count = SysUser.objects.filter(role='student').count()
+        teacher_count = SysUser.objects.filter(role='teacher').count()
+        admin_count = SysUser.objects.filter(role='admin').count()
+
+        pending_resource_count = LearningResource.objects.filter(status=0).count()
+        approved_resource_count = LearningResource.objects.filter(status=1).count()
+        rejected_resource_count = LearningResource.objects.filter(status=2).count()
+        total_resource_count = pending_resource_count + approved_resource_count + rejected_resource_count
+
+        forum_forum_count = ForumComment.objects.filter(is_deleted=False).count()
+        forum_reply_count = CommentReply.objects.filter(is_deleted=False).count()
+        resource_comment_count = ResourceComment.objects.filter(is_deleted=False).count()
+        forum_comment_count = forum_forum_count + forum_reply_count + resource_comment_count
+
+        data = {
+            'student_count': student_count,
+            'teacher_count': teacher_count,
+            'admin_count': admin_count,
+            'total_user_count': student_count + teacher_count + admin_count,
+            'pending_resource_count': pending_resource_count,
+            'approved_resource_count': approved_resource_count,
+            'rejected_resource_count': rejected_resource_count,
+            'total_resource_count': total_resource_count,
+            'forum_comment_count': forum_comment_count,
+            'forum_forum_comment_count': forum_forum_count,
+            'forum_reply_count': forum_reply_count,
+            'resource_comment_count': resource_comment_count,
+        }
+
+        return Response({'code': 200, 'info': '获取运营数据成功', 'data': data})

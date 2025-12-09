@@ -1,6 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ForumCommentViewSet, NotificationViewSet, ResourceCommentViewSet, AdminUserManagementViewSet
+from .views import (
+     ForumCommentViewSet,
+     NotificationViewSet,
+     ResourceCommentViewSet,
+     AdminUserManagementViewSet,
+     AdminForumModerationViewSet
+)
 
 
 # 创建路由
@@ -14,6 +20,9 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 
 # 注册管理员用户管理路由
 router.register(r'admin/users', AdminUserManagementViewSet, basename='admin-user')
+
+# 注册论坛管理路由
+router.register(r'admin/moderation', AdminForumModerationViewSet, basename='admin-forum-moderation')
 
 # 定义资源评论路由，使用嵌套路由
 urlpatterns = [

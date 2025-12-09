@@ -29,8 +29,7 @@
 						<template v-else-if="getUserRole === 'admin'">
 							<el-menu-item index="/admin/user-manage">用户管理</el-menu-item>
 							<el-menu-item index="/admin/resource-audit">资源审核</el-menu-item>
-							<el-menu-item index="/admin/system-analysis">系统分析</el-menu-item>
-							<el-menu-item index="/forum">论坛</el-menu-item>
+							<el-menu-item index="/admin/forum-manage">论坛管理</el-menu-item>
 						</template>
 					</el-menu>
 					<el-dropdown>

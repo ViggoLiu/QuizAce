@@ -45,6 +45,9 @@
                 <span class="score">{{ question.score }} 分</span>
               </div>
               <p class="question-content">{{ question.content }}</p>
+              <div v-if="question.media_url" class="question-media">
+                <img :src="formatMediaUrl(question.media_url)" alt="题目图片" />
+              </div>
 
               <div v-if="question.question_type === 'objective'" class="option-wrapper">
                 <el-radio-group
@@ -127,7 +130,7 @@
             </li>
             <li v-if="showResult && attemptSummary?.question_type === 'objective'">
               <span>得分</span>
-              <strong>{{ attemptSummary.obtained_score }}/{{ attemptSummary.total_score || 100 }}</strong>
+              <strong>{{ attemptSummary.obtained_score }}/{{ expectedTotalScore }}</strong>
             </li>
             <li v-if="showResult && attemptSummary?.submitted_at">
               <span>提交时间</span>
@@ -141,8 +144,8 @@
           <el-alert
             v-if="showResult && attemptSummary?.question_type === 'subjective'"
             class="mt-12"
-            title="已提交，等待老师批阅"
-            type="info"
+            :title="attemptSummary?.is_review_required ? '已提交，等待老师批阅' : '批阅完成，可查看参考答案'"
+            :type="attemptSummary?.is_review_required ? 'info' : 'success'"
             show-icon
           />
         </el-card>
@@ -155,7 +158,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { get, post } from '@/util/request'
+import { get, post, getMediaBaseUrl } from '@/util/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -176,8 +179,8 @@ const timerRef = ref(null)
 const collectingMap = ref({})
 
 const questionTypes = {
-  objective: { label: '客观题练习', size: 10 },
-  subjective: { label: '主观题练习', size: 5 }
+  objective: { label: '客观题练习', size: 10, score: 10 },
+  subjective: { label: '主观题练习', size: 5, score: 20 }
 }
 
 const currentTypeLabel = computed(() => questionTypes[questionType.value]?.label || '练习')
@@ -214,6 +217,14 @@ const formattedCountdown = computed(() => formatCountdown(remainingSeconds.value
 const isInteractive = computed(() => attemptStatus.value === 'ongoing' && !showResult.value && remainingSeconds.value > 0)
 const submitDisabled = computed(() => !attemptId.value || showResult.value || attemptStatus.value !== 'ongoing' || submitting.value)
 const isExam = computed(() => attemptSummary.value?.mode === 'exam')
+const expectedTotalScore = computed(() => {
+  const summary = attemptSummary.value
+  if (!summary) return 0
+  if (summary.total_score) return summary.total_score
+  const meta = questionTypes[summary.question_type]
+  if (!meta) return 0
+  return (summary.total_questions || meta.size || 0) * (meta.score || 0)
+})
 
 const clearTimer = () => {
   if (timerRef.value) {
@@ -240,6 +251,32 @@ const startTimer = (expires, fallbackSeconds) => {
   timerRef.value = setInterval(tick, 1000)
 }
 
+const mediaBaseUrl = getMediaBaseUrl()
+
+const formatMediaUrl = (value) => {
+  if (!value) return ''
+  if (/^https?:/i.test(value)) {
+    return value
+  }
+  if (value.startsWith('http')) {
+    return value
+  }
+  if (value.startsWith('/')) {
+    return `${mediaBaseUrl}${value}`
+  }
+  return `${mediaBaseUrl}/${value}`
+}
+
+const OPTION_KEYS = ['A', 'B', 'C', 'D']
+
+const normalizeOptions = (options = {}) => {
+  const normalized = {}
+  OPTION_KEYS.forEach((key) => {
+    normalized[key] = options?.[key] ?? ''
+  })
+  return normalized
+}
+
 const normalizeStartQuestions = (list = []) => {
   return list.map((item, index) => ({
     id: item.id,
@@ -247,7 +284,7 @@ const normalizeStartQuestions = (list = []) => {
     question_type: item.question_type,
     content: item.content,
     subject_name: item.subject_name,
-    options: item.options || {},
+    options: item.question_type === 'objective' ? normalizeOptions(item.options || {}) : {},
     score: item.score,
     user_answer: item.user_answer || '',
     is_correct: item.is_correct ?? null,
@@ -256,6 +293,7 @@ const normalizeStartQuestions = (list = []) => {
     awarded_score: item.awarded_score ?? 0,
     item_id: null,
     in_wrong_book: false,
+    media_url: item.media_url || '',
   }))
 }
 
@@ -266,7 +304,7 @@ const normalizeAttemptItems = (items = []) => {
     question_type: item.question.question_type,
     content: item.question.content,
     subject_name: item.question.subject_name,
-    options: item.question.options || {},
+    options: item.question.question_type === 'objective' ? normalizeOptions(item.question.options || {}) : {},
     score: item.question.score,
     answer: item.question.answer,
     analysis: item.question.analysis,
@@ -275,6 +313,7 @@ const normalizeAttemptItems = (items = []) => {
     awarded_score: item.awarded_score ?? 0,
     item_id: item.id,
     in_wrong_book: Boolean(item.in_wrong_book),
+    media_url: item.question.media_url || '',
   }))
 }
 
@@ -324,12 +363,14 @@ const startAttempt = async () => {
       const data = res.data.data
       attemptId.value = data.attempt_id
       attemptStatus.value = 'ongoing'
+      const perQuestionScore = questionTypes[data.question_type || questionType.value]?.score || 0
+      const questionCount = data.questions?.length || questionTypes[questionType.value]?.size || 0
       attemptSummary.value = {
         mode: 'practice',
         question_type: data.question_type,
-        total_questions: data.questions?.length || 0,
+        total_questions: questionCount,
         correct_count: 0,
-        total_score: (data.questions?.length || 0) * 10,
+        total_score: questionCount * perQuestionScore,
         obtained_score: 0,
         subject_name: data.subject?.name || subjectName.value,
         assignment_title: null,
@@ -646,6 +687,22 @@ onBeforeRouteLeave(async (to, from, next) => {
   font-size: 15px;
   line-height: 1.6;
   margin-bottom: 10px;
+}
+
+.question-media {
+  margin-bottom: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e6eaf2;
+  background: #f9fafc;
+
+  img {
+    display: block;
+    width: 100%;
+    max-height: 360px;
+    object-fit: contain;
+    background: #fff;
+  }
 }
 
 .option-wrapper {

@@ -55,10 +55,6 @@ const selectedSubject = ref(null)
 const selectedType = ref('objective')
 const typeDialogVisible = ref(false)
 
-const defaultSubjects = [
-  { id: 'mock-gs', name: '高等数学', description: '微积分基础与常见题型' }
-]
-
 const questionTypes = [
   { label: '客观题练习（10题）', value: 'objective' },
   { label: '主观题练习（5题）', value: 'subjective' }
@@ -69,15 +65,15 @@ const fetchSubjects = async () => {
   try {
     const res = await get('/exam/subjects/')
     if (res.data.code === 200) {
-      subjects.value = res.data.data?.length ? res.data.data : defaultSubjects
+      subjects.value = res.data.data || []
     } else {
-      subjects.value = defaultSubjects
-      ElMessage.error(res.data.info || '获取科目失败，已显示默认科目')
+      subjects.value = []
+      ElMessage.error(res.data.info || '获取科目失败，请稍后重试')
     }
   } catch (error) {
     console.error(error)
-    subjects.value = defaultSubjects
-    ElMessage.error('获取科目失败，已显示默认科目')
+    subjects.value = []
+    ElMessage.error('获取科目失败，请稍后重试')
   } finally {
     subjectLoading.value = false
   }

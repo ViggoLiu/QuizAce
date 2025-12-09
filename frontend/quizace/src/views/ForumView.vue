@@ -139,7 +139,9 @@
 <script>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { get, post, del } from '@/util/request.js'
+import { get, post, del, getMediaBaseUrl } from '@/util/request.js'
+
+const mediaBaseUrl = getMediaBaseUrl()
 
 export default {
   name: 'ForumView',
@@ -354,7 +356,7 @@ export default {
         return avatar;
       }
       // 如果是相对路径，拼接完整的URL
-      return `http://localhost:8000${avatar}`;
+      return avatar.startsWith('/') ? `${mediaBaseUrl}${avatar}` : `${mediaBaseUrl}/${avatar}`;
     }
   }
 };

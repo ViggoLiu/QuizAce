@@ -1,7 +1,17 @@
+import json
+
 from rest_framework import serializers
 
 from .constants import resolve_score
-from .models import ExamAssignment, PracticeAttempt, PracticeAttemptItem, Question, Subject, WrongBookEntry
+from .models import (
+    ExamAssignment,
+    PracticeAttempt,
+    PracticeAttemptItem,
+    Question,
+    QuestionDraft,
+    Subject,
+    WrongBookEntry,
+)
 
 
 class SubjectSerializer(serializers.ModelSerializer):
@@ -13,6 +23,7 @@ class SubjectSerializer(serializers.ModelSerializer):
 class QuestionSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source="subject.name", read_only=True)
     options = serializers.SerializerMethodField()
+    media_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
@@ -21,31 +32,111 @@ class QuestionSerializer(serializers.ModelSerializer):
             "subject",
             "subject_name",
             "question_type",
+            "source_mode",
+            "status",
             "content",
             "options",
             "answer",
             "analysis",
             "score",
+            "media_url",
+            "created_by",
+            "metadata",
         )
 
     def get_options(self, obj):
         return obj.options_dict
+
+    def get_media_url(self, obj):
+        return obj.media_url or ""
+
+
+class QuestionCreateSerializer(serializers.ModelSerializer):
+    options = serializers.JSONField(required=False, allow_null=True)
+
+    class Meta:
+        model = Question
+        fields = (
+            "subject",
+            "question_type",
+            "content",
+            "options",
+            "answer",
+            "analysis",
+            "score",
+            "source_mode",
+            "status",
+            "media_url",
+            "metadata",
+        )
+        extra_kwargs = {
+            "analysis": {"required": False, "allow_blank": True},
+            "score": {"required": False},
+            "metadata": {"required": False},
+            "media_url": {"required": False, "allow_blank": True},
+        }
+
+    def validate(self, attrs):
+        question_type = attrs.get("question_type")
+        options = attrs.get("options")
+        if question_type == "objective" and not options:
+            raise serializers.ValidationError("客观题至少需要提供选项信息")
+        if question_type == "objective" and not attrs.get("answer"):
+            raise serializers.ValidationError("客观题需要设置标准答案")
+        score = attrs.get("score")
+        if not score:
+            attrs["score"] = resolve_score(question_type, None)
+        return attrs
+
+    def _normalize_options(self, value):
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, list):
+            normalized = {}
+            for index, item in enumerate(value):
+                label = chr(ord("A") + index)
+                if isinstance(item, dict):
+                    text = item.get("text") or item.get("value") or item.get("label") or ""
+                    normalized[item.get("label") or label] = text
+                else:
+                    normalized[label] = str(item)
+            return normalized
+        raise serializers.ValidationError("选项格式不正确")
+
+    def create(self, validated_data):
+        options = validated_data.pop("options", None)
+        normalized = self._normalize_options(options)
+        if normalized is not None:
+            validated_data["options"] = json.dumps(normalized, ensure_ascii=False)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        options = validated_data.pop("options", None)
+        if options is not None:
+            validated_data["options"] = json.dumps(self._normalize_options(options), ensure_ascii=False)
+        return super().update(instance, validated_data)
 
 
 class PracticeQuestionSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source="subject.name", read_only=True)
     options = serializers.SerializerMethodField()
     score = serializers.SerializerMethodField()
+    media_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
-        fields = ("id", "question_type", "content", "options", "score", "subject_name")
+        fields = ("id", "question_type", "content", "options", "score", "subject_name", "media_url")
 
     def get_options(self, obj):
         return obj.options_dict
 
     def get_score(self, obj):
         return resolve_score(obj.question_type, obj.score)
+
+    def get_media_url(self, obj):
+        return obj.media_url or ""
 
 
 class PracticeAttemptItemSerializer(serializers.ModelSerializer):
@@ -58,16 +149,19 @@ class PracticeAttemptItemSerializer(serializers.ModelSerializer):
 
     def get_question(self, obj):
         question = obj.question
-        show_solution = self.context.get("show_solution", False)
+        force_show = self.context.get("force_show_solution", False)
+        visibility = self.context.get("solution_visibility") or {}
         data = {
             "id": question.id,
             "question_type": question.question_type,
             "content": question.content,
             "options": question.options_dict,
-            "score": resolve_score(question.question_type, question.score),
+            "score": obj.expected_score or resolve_score(question.question_type, question.score),
             "subject_name": question.subject.name,
+            "media_url": question.media_url or "",
         }
-        if show_solution:
+        can_show = force_show or visibility.get(question.question_type)
+        if can_show:
             data["answer"] = question.answer
             data["analysis"] = question.analysis
         return data
@@ -156,3 +250,36 @@ class WrongBookEntrySerializer(serializers.ModelSerializer):
             "last_wrong_at",
             "created_at",
         )
+
+
+class QuestionDraftSerializer(serializers.ModelSerializer):
+    subject_name = serializers.CharField(source="subject.name", read_only=True)
+    teacher_name = serializers.CharField(source="teacher.username", read_only=True)
+    media_url = serializers.SerializerMethodField()
+    question_id = serializers.IntegerField(source="question.id", read_only=True)
+
+    class Meta:
+        model = QuestionDraft
+        fields = (
+            "id",
+            "teacher",
+            "teacher_name",
+            "subject",
+            "subject_name",
+            "question_type",
+            "source_mode",
+            "status",
+            "media_url",
+            "parsed_title",
+            "parsed_content",
+            "parsed_options",
+            "parsed_answer",
+            "parsed_analysis",
+            "error_message",
+            "question_id",
+            "created_at",
+            "updated_at",
+        )
+
+    def get_media_url(self, obj):
+        return obj.resolved_media_url
